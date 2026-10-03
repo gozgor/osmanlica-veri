@@ -1,0 +1,52 @@
+name: Kelimeleri güncelle
+
+on:
+  # Her ayın 1'inde, Türkiye saatiyle 06:17'de
+  schedule:
+    - cron: "17 3 1 * *"
+  # "kaynak" klasöründe değişiklik olunca (elle kelime/paragraf eklenince)
+  push:
+    branches: [main]
+    paths:
+      - "kaynak/**"
+      - "scripts/**"
+  # Actions sekmesinden "Run workflow" ile elle çalıştırmak için
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kelimeleri-guncelle
+  cancel-in-progress: true
+
+jobs:
+  guncelle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Veriyi hazırla
+        run: python scripts/hazirla.py
+
+      - name: Değişiklik varsa kaydet
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add veri
+          if git diff --cached --quiet; then
+            echo "Değişiklik yok."
+          else
+            git commit -m "Veri güncellendi: $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: CDN önbelleğini yenile
+        run: |
+          for f in seviye1 seviye2 seviye3 paragraflar bilgi; do
+            curl -s "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@main/veri/$f.json" > /dev/null || true
+          done
