@@ -1,0 +1,475 @@
+<!-- ===== Osmanlıca Okuma Alıştırması — Blogger için tek parça kod ===== -->
+<!-- Yazının "HTML görünümü"ne ya da Düzen > HTML/JavaScript gadget'ına olduğu gibi yapıştırın. -->
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Naskh+Arabic&display=swap" rel="stylesheet">
+<style>
+#osm-app{max-width:660px;margin:1.2em auto;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#2b2420;line-height:1.5}
+#osm-app *{box-sizing:border-box}
+#osm-app h3{margin:0 0 .6em;font-size:1.3em;color:#6b3418;text-align:center}
+#osm-app .osm-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:0 0 10px}
+#osm-app button{font:inherit;font-size:.95em;cursor:pointer;border:1px solid #d9c6a8;background:#fff;color:#4a3426;padding:8px 12px;border-radius:999px;margin:0;line-height:1.2;box-shadow:none;text-transform:none}
+#osm-app button:hover{background:#f6ecdc}
+#osm-app button.on{background:#7a3e1d;border-color:#7a3e1d;color:#fff}
+#osm-app button:disabled{opacity:.45;cursor:not-allowed}
+#osm-app .osm-card{background:#fffaf2;border:1px solid #e8dcc8;border-radius:16px;padding:18px 16px}
+#osm-app .osm-meta{display:flex;justify-content:space-between;font-size:.85em;color:#8a7461;margin-bottom:6px}
+#osm-app .osm-text{font-family:'Amiri','Noto Naskh Arabic','Scheherazade New',serif;direction:rtl;text-align:center;font-size:2.7em;line-height:1.9;margin:8px 0 14px;color:#1f1712;word-wrap:break-word}
+#osm-app .osm-text.para{font-size:1.75em;text-align:right;line-height:2.2}
+#osm-app textarea{width:100%;font:inherit;font-size:1.1em;padding:10px 12px;border:1px solid #d9c6a8;border-radius:10px;background:#fff;color:#2b2420;resize:vertical;margin:0}
+#osm-app .osm-main{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+#osm-app .osm-main button{flex:1;min-width:120px;border-radius:10px;padding:11px}
+#osm-app .osm-check{background:#7a3e1d;border-color:#7a3e1d;color:#fff}
+#osm-app .osm-check:hover{background:#5f2f15}
+#osm-app .osm-mic.rec{background:#b3261e;border-color:#b3261e;color:#fff}
+#osm-app .osm-fb{margin-top:12px;padding:10px 12px;border-radius:10px;display:none;font-size:.97em}
+#osm-app .osm-fb.ok{display:block;background:#e7f4e8;color:#1e5b26}
+#osm-app .osm-fb.near{display:block;background:#fff3dc;color:#7a4b00}
+#osm-app .osm-fb.bad{display:block;background:#fbe7e5;color:#8c1d16}
+#osm-app .osm-fb.info{display:block;background:#eef0f6;color:#2f3a5c}
+#osm-app .osm-fb .w-ok{color:#1e5b26;font-weight:600}
+#osm-app .osm-fb .w-miss{color:#b3261e;text-decoration:underline wavy}
+#osm-app .osm-note{font-size:.8em;color:#8a7461;text-align:center;margin-top:10px}
+#osm-app .osm-hidden{display:none}
+</style>
+
+<div id="osm-app">
+  <h3>Osmanlıca Okuma Alıştırması</h3>
+  <div class="osm-row" id="osm-levels"></div>
+  <div class="osm-row">
+    <button type="button" id="osm-mode-yazi" class="on">⌨️ Yazarak</button>
+    <button type="button" id="osm-mode-ses">🎤 Sesle</button>
+  </div>
+  <div class="osm-card" id="osm-card">
+    <div class="osm-meta"><span id="osm-score"></span><span id="osm-left"></span></div>
+    <div class="osm-text" id="osm-text"></div>
+    <div id="osm-play">
+      <textarea id="osm-input" rows="1" placeholder="Okunuşu Latin harfleriyle yazın…" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+      <div class="osm-main">
+        <button type="button" class="osm-mic osm-hidden" id="osm-mic">🎤 Okumaya başla</button>
+        <button type="button" class="osm-check" id="osm-check">Kontrol et</button>
+      </div>
+      <div class="osm-fb" id="osm-fb"></div>
+      <div class="osm-row" style="margin-top:12px">
+        <button type="button" id="osm-reveal">Cevabı göster</button>
+        <button type="button" id="osm-listen" class="osm-hidden">🔊 Doğru okunuşu dinle</button>
+        <button type="button" id="osm-next">Sonraki ›</button>
+      </div>
+    </div>
+  </div>
+  <div class="osm-note" id="osm-src"></div>
+  <div class="osm-note" id="osm-note">Şapkalar (â, î, û) ve kitab/kitap gibi farklar hata sayılmaz. Her turda rastgele 15 kelime (paragrafta 5 metin) gelir; yanlış bilinenler tur sonunda bir kez daha sorulur.</div>
+</div>
+
+<script>
+(function () {
+  /* ========== KELİME LİSTESİ ==========
+     o: Osmanlıca yazılış · l: okunuş · a: anlam · v: kabul edilen diğer okunuşlar (isteğe bağlı)
+     Yeni kelime eklemek için ilgili seviyeye aynı biçimde bir satır ekleyin. */
+  var DATA = [
+    { ad: "1 · Kısa kelimeler", items: [
+      { o: "باب", l: "bâb", a: "kapı" },
+      { o: "كتاب", l: "kitâb", a: "kitap" },
+      { o: "قلم", l: "kalem", a: "kalem" },
+      { o: "ادب", l: "edeb", a: "terbiye, görgü" },
+      { o: "نور", l: "nûr", a: "ışık" },
+      { o: "درس", l: "ders", a: "ders" },
+      { o: "گل", l: "gül", a: "gül (çiçek)" },
+      { o: "یول", l: "yol", a: "yol" },
+      { o: "صو", l: "su", a: "su" },
+      { o: "باش", l: "baş", a: "baş" },
+      { o: "طاش", l: "taş", a: "taş" },
+      { o: "گون", l: "gün", a: "gün" },
+      { o: "پدر", l: "peder", a: "baba" },
+      { o: "چای", l: "çay", a: "çay" },
+      { o: "آت", l: "at", a: "at (hayvan)" },
+      { o: "آی", l: "ay", a: "ay" },
+      { o: "قان", l: "kan", a: "kan" },
+      { o: "قار", l: "kar", a: "kar" },
+      { o: "یاز", l: "yaz", a: "yaz mevsimi" },
+      { o: "قیش", l: "kış", a: "kış" },
+      { o: "اوت", l: "ot", a: "ot" },
+      { o: "گوز", l: "göz", a: "göz" },
+      { o: "دیل", l: "dil", a: "dil" },
+      { o: "باغ", l: "bağ", a: "bağ" },
+      { o: "طاغ", l: "dağ", a: "dağ" },
+      { o: "بال", l: "bal", a: "bal" },
+      { o: "تاج", l: "tâc", a: "taç" },
+      { o: "شمس", l: "şems", a: "güneş" },
+      { o: "قمر", l: "kamer", a: "ay" },
+      { o: "عقل", l: "akıl", a: "akıl", v: ["akl"] },
+      { o: "حق", l: "hak", a: "hak, doğru", v: ["hakk"] },
+      { o: "دوست", l: "dost", a: "dost" },
+      { o: "بر", l: "bir", a: "bir" },
+      { o: "ایكی", l: "iki", a: "iki" },
+      { o: "اوچ", l: "üç", a: "üç" },
+      { o: "بش", l: "beş", a: "beş" },
+      { o: "اون", l: "on", a: "on" },
+      { o: "یوز", l: "yüz", a: "yüz" },
+      { o: "گوك", l: "gök", a: "gök" },
+      { o: "قوش", l: "kuş", a: "kuş" },
+      { o: "پاره", l: "pâre", a: "para", v: ["para"] },
+      { o: "چیچك", l: "çiçek", a: "çiçek" }
+    ]},
+    { ad: "2 · Kelimeler", items: [
+      { o: "مكتب", l: "mekteb", a: "okul" },
+      { o: "معلم", l: "muallim", a: "öğretmen" },
+      { o: "طلبه", l: "talebe", a: "öğrenci(ler)" },
+      { o: "اوطه", l: "oda", a: "oda" },
+      { o: "چوجق", l: "çocuk", a: "çocuk" },
+      { o: "گوزل", l: "güzel", a: "güzel" },
+      { o: "باغچه", l: "bahçe", a: "bahçe", v: ["bağçe"] },
+      { o: "دڭز", l: "deniz", a: "deniz (ڭ: sağır kef)", v: ["deñiz"] },
+      { o: "ژاله", l: "jâle", a: "çiy" },
+      { o: "ساعت", l: "saat", a: "saat" },
+      { o: "دنیا", l: "dünyâ", a: "dünya" },
+      { o: "انسان", l: "insan", a: "insan" },
+      { o: "اوقومق", l: "okumak", a: "okumak" },
+      { o: "یازمق", l: "yazmak", a: "yazmak" },
+      { o: "كتابلر", l: "kitablar", a: "kitaplar", v: ["kitaplar"] },
+      { o: "پنجره", l: "pencere", a: "pencere" },
+      { o: "قپو", l: "kapu", a: "kapı", v: ["kapı"] },
+      { o: "آغاج", l: "ağaç", a: "ağaç" },
+      { o: "اكمك", l: "ekmek", a: "ekmek" },
+      { o: "صباح", l: "sabah", a: "sabah" },
+      { o: "آقشام", l: "akşam", a: "akşam" },
+      { o: "گیجه", l: "gece", a: "gece" },
+      { o: "یاغمور", l: "yağmur", a: "yağmur" },
+      { o: "قرنداش", l: "karındaş", a: "kardeş", v: ["kardeş", "kardaş"] },
+      { o: "آنا", l: "ana", a: "anne" },
+      { o: "بابا", l: "baba", a: "baba" },
+      { o: "قادین", l: "kadın", a: "kadın" },
+      { o: "آدم", l: "adam", a: "adam" },
+      { o: "شهر", l: "şehir", a: "şehir", v: ["şehr"] },
+      { o: "كوی", l: "köy", a: "köy" },
+      { o: "بیوك", l: "büyük", a: "büyük" },
+      { o: "كوچك", l: "küçük", a: "küçük" },
+      { o: "ایی", l: "iyi", a: "iyi" },
+      { o: "فنا", l: "fena", a: "kötü" },
+      { o: "سلام", l: "selâm", a: "selam" },
+      { o: "كاغد", l: "kâğıd", a: "kâğıt" },
+      { o: "دفتر", l: "defter", a: "defter" },
+      { o: "لسان", l: "lisân", a: "dil" },
+      { o: "عالم", l: "âlem", a: "âlem, dünya" },
+      { o: "حیات", l: "hayât", a: "hayat" },
+      { o: "وطن", l: "vatan", a: "vatan" },
+      { o: "ملت", l: "millet", a: "millet" },
+      { o: "عسكر", l: "asker", a: "asker" },
+      { o: "چشمه", l: "çeşme", a: "çeşme" },
+      { o: "سویلمك", l: "söylemek", a: "söylemek" },
+      { o: "باقمق", l: "bakmak", a: "bakmak" },
+      { o: "گیتمك", l: "gitmek", a: "gitmek" },
+      { o: "گلمك", l: "gelmek", a: "gelmek" }
+    ]},
+    { ad: "3 · Terkipler ve zor kelimeler", items: [
+      { o: "خواجه", l: "hoca", a: "hoca, öğretici", v: ["hâce"] },
+      { o: "كتبخانه", l: "kütübhâne", a: "kütüphane", v: ["kütüphane"] },
+      { o: "استانبول", l: "İstanbul", a: "İstanbul" },
+      { o: "مملكت", l: "memleket", a: "ülke, yurt" },
+      { o: "ادبیات", l: "edebiyyât", a: "edebiyat", v: ["edebiyat"] },
+      { o: "مكتوب", l: "mektûb", a: "mektup" },
+      { o: "مشغول", l: "meşgûl", a: "meşgul" },
+      { o: "معلومات", l: "ma'lûmât", a: "bilgiler" },
+      { o: "خیرلی", l: "hayırlı", a: "hayırlı" },
+      { o: "باب عالی", l: "Bâb-ı Âlî", a: "Osmanlı hükûmet merkezi" },
+      { o: "دولت علیه", l: "Devlet-i Aliyye", a: "Yüce Devlet (Osmanlı Devleti)" },
+      { o: "تاریخ عثمانی", l: "Târîh-i Osmânî", a: "Osmanlı tarihi" },
+      { o: "اهل علم", l: "ehl-i ilm", a: "ilim sahipleri", v: ["ehli ilim"] },
+      { o: "مدرسه", l: "medrese", a: "medrese" },
+      { o: "مكتب ابتدائیه", l: "Mekteb-i İbtidâiyye", a: "ilkokul" },
+      { o: "صدر اعظم", l: "sadr-ı a'zam", a: "sadrazam, başvezir", v: ["sadrazam"] },
+      { o: "شیخ الاسلام", l: "şeyhülislâm", a: "şeyhülislam" },
+      { o: "پادشاه", l: "pâdişâh", a: "padişah" },
+      { o: "سلطان", l: "sultân", a: "sultan" },
+      { o: "خلافت", l: "hilâfet", a: "halifelik" },
+      { o: "مجلس مبعوثان", l: "Meclis-i Mebûsân", a: "Mebuslar Meclisi" },
+      { o: "قانون اساسی", l: "Kânûn-ı Esâsî", a: "Anayasa" },
+      { o: "تنظیمات", l: "Tanzîmât", a: "Tanzimat" },
+      { o: "جمهوریت", l: "cumhûriyyet", a: "cumhuriyet", v: ["cumhuriyet"] },
+      { o: "معارف", l: "maârif", a: "eğitim, bilgiler" },
+      { o: "مطبعه", l: "matbaa", a: "basımevi" },
+      { o: "غزته", l: "gazete", a: "gazete" },
+      { o: "مكتب حربیه", l: "Mekteb-i Harbiyye", a: "Harp Okulu" },
+      { o: "دار الفنون", l: "Dârülfünûn", a: "üniversite" },
+      { o: "لسان عثمانی", l: "lisân-ı Osmânî", a: "Osmanlıca" },
+      { o: "علم و ادب", l: "ilm ü edeb", a: "ilim ve edep", v: ["ilmü edeb", "ilim ve edep"] },
+      { o: "شاعر", l: "şâir", a: "şair" },
+      { o: "دیوان", l: "dîvân", a: "divan (şiir kitabı)" },
+      { o: "غزل", l: "gazel", a: "gazel (şiir türü)" },
+      { o: "قصیده", l: "kasîde", a: "kaside (şiir türü)" },
+      { o: "مؤلف", l: "müellif", a: "yazar" },
+      { o: "اثر", l: "eser", a: "eser" },
+      { o: "محبت", l: "muhabbet", a: "sevgi" },
+      { o: "ظریف", l: "zarîf", a: "zarif" },
+      { o: "حرمت", l: "hürmet", a: "saygı" },
+      { o: "فقیر", l: "fakîr", a: "yoksul" },
+      { o: "عائله", l: "âile", a: "aile" },
+      { o: "مسافر", l: "müsâfir", a: "misafir", v: ["misafir"] },
+      { o: "قهوه", l: "kahve", a: "kahve" }
+    ]},
+    { ad: "4 · Paragraf", para: true, items: [
+      { o: "بو گون هوا چوق گوزل. چوجقلر باغچه\u200cده اوینایورلر. بن ده كتابمی آلوب مكتبه گیتدم.",
+        l: "Bu gün hava çok güzel. Çocuklar bahçede oynuyorlar. Ben de kitabımı alıp mektebe gittim.",
+        a: "Bugün hava çok güzel. Çocuklar bahçede oynuyor. Ben de kitabımı alıp okula gittim." },
+      { o: "خواجه افندی درسه گلدی. طلبه\u200cلر قلملرینی چیقاردیلر و یازمغه باشلادیلر.",
+        l: "Hoca efendi derse geldi. Talebeler kalemlerini çıkardılar ve yazmağa başladılar.",
+        a: "Hoca derse geldi. Öğrenciler kalemlerini çıkarıp yazmaya başladı." },
+      { o: "استانبول بیوك و گوزل بر شهردر. دڭزی و جامعلری مشهوردر.",
+        l: "İstanbul büyük ve güzel bir şehirdir. Denizi ve camileri meşhurdur.",
+        a: "İstanbul büyük ve güzel bir şehirdir. Denizi ve camileri ünlüdür." },
+      { o: "صباح اركن قالقدم. اللرمی و یوزمی ییقادم. صوڭره چای ایچدم.",
+        l: "Sabah erken kalktım. Ellerimi ve yüzümü yıkadım. Sonra çay içtim.",
+        a: "Sabah erken kalktım. Ellerimi ve yüzümü yıkadım. Sonra çay içtim." },
+      { o: "والده\u200cم بڭا بر مكتوب یازدی. مكتوبی اوقویونجه چوق سویندم.",
+        l: "Vâlidem bana bir mektûb yazdı. Mektûbu okuyunca çok sevindim.",
+        a: "Annem bana bir mektup yazdı. Mektubu okuyunca çok sevindim." },
+      { o: "قیش گلدی. طاغلره قار یاغدی. چوجقلر سوینجله سوقاغه قوشدیلر.",
+        l: "Kış geldi. Dağlara kar yağdı. Çocuklar sevinçle sokağa koştular.",
+        a: "Kış geldi. Dağlara kar yağdı. Çocuklar sevinçle sokağa koştu." },
+      { o: "كتاب اوقومق انسانه فائده ویرر. هر گون براز اوقومق لازمدر.",
+        l: "Kitâb okumak insana fâide verir. Her gün biraz okumak lâzımdır.",
+        a: "Kitap okumak insana fayda sağlar. Her gün biraz okumak gerekir." },
+      { o: "بزم اومز دڭزه یاقیندر. پنجره\u200cدن گمیلری سیر ایدرم.",
+        l: "Bizim evimiz denize yakındır. Pencereden gemileri seyrederim.",
+        a: "Evimiz denize yakındır. Pencereden gemileri seyrederim." },
+      { o: "دولت عثمانیه آلتی عصر سورمشدر. پایتختی استانبول ایدی.",
+        l: "Devlet-i Osmâniyye altı asır sürmüştür. Pâyitahtı İstanbul idi.",
+        a: "Osmanlı Devleti altı yüzyıl sürmüştür. Başkenti İstanbul idi." },
+      { o: "بهار گلنجه آغاجلر چیچك آچار. قوشلر دالدن داله اوچار.",
+        l: "Bahar gelince ağaçlar çiçek açar. Kuşlar daldan dala uçar.",
+        a: "Bahar gelince ağaçlar çiçek açar. Kuşlar daldan dala uçar." },
+      { o: "مسافرلرمزه قهوه اكرام ایتدك. اونلر ده بزه تشكر ایتدیلر.",
+        l: "Müsâfirlerimize kahve ikrâm ettik. Onlar da bize teşekkür ettiler.",
+        a: "Misafirlerimize kahve ikram ettik. Onlar da bize teşekkür ettiler." },
+      { o: "خواجه\u200cمز بزه عثمانلیجه درس ویرر. هر هفته یڭی كلمه\u200cلر اوگرنیرز.",
+        l: "Hocamız bize Osmanlıca ders verir. Her hafta yeni kelimeler öğreniriz.",
+        a: "Hocamız bize Osmanlıca ders verir. Her hafta yeni kelimeler öğreniriz." }
+    ]}
+  ];
+
+  /* ========== ÇEVRİMİÇİ VERİ ==========
+     Kelimeler önce GitHub + jsDelivr'deki güncel listeden yüklenir.
+     Bağlantı kurulamazsa yukarıdaki yerleşik liste kullanılır. */
+  var VERI_ADRESI = "https://cdn.jsdelivr.net/gh/gozgor/osmanlica-veri@main/veri/";
+  var VERI_DOSYALARI = ["seviye1.json", "seviye2.json", "seviye3.json", "paragraflar.json"];
+
+  /* ========== YARDIMCILAR ========== */
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  function $(id) { return document.getElementById(id); }
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+  // Karşılaştırma için metni sadeleştir: küçük harf, şapka yok, kesme/tire yok, noktalama yok
+  function norm(s) {
+    s = String(s || "").toLocaleLowerCase("tr-TR");
+    s = s.replace(/[âàá]/g, "a").replace(/[îì]/g, "i").replace(/[ûù]/g, "u").replace(/ô/g, "o").replace(/ñ/g, "n");
+    s = s.replace(/[’'‘`ʿʾ]/g, "").replace(/-/g, "");
+    s = s.replace(/[^a-zçğıöşü0-9\s]/g, " ");
+    return s.replace(/\s+/g, " ").trim();
+  }
+  // Kelime sonu sertleşmesi (kitab/kitap, mekteb/mektep, ahmed/ahmet) fark etmesin
+  function soft(w) { return w.replace(/b$/, "p").replace(/d$/, "t").replace(/c$/, "ç").replace(/ğ/g, "g"); }
+  function words(s) { var n = norm(s); return n ? n.split(" ").map(soft) : []; }
+  function key(s) { return words(s).join(""); }
+  function lev(a, b) {
+    var m = a.length, n = b.length, d = [], i, j;
+    for (i = 0; i <= m; i++) d[i] = [i];
+    for (j = 0; j <= n; j++) d[0][j] = j;
+    for (i = 1; i <= m; i++) for (j = 1; j <= n; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[m][n];
+  }
+  function ratio(a, b) { var mx = Math.max(a.length, b.length); return mx ? 1 - lev(a, b) / mx : 1; }
+
+  /* ========== DURUM ========== */
+  var st = { level: 0, mode: "yazi", queue: [], cur: null, asked: 0, correct: 0, answered: false, missed: false };
+  var rec = null, listening = false, lastAlts = [];
+
+  function isPara() { return !!DATA[st.level].para; }
+
+  /* ========== ARAYÜZ ========== */
+  function buildLevels() {
+    var box = $("osm-levels"); box.innerHTML = "";
+    DATA.forEach(function (lv, i) {
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = lv.ad; if (i === st.level) b.className = "on";
+      b.onclick = function () { st.level = i; buildLevels(); startRound(); };
+      box.appendChild(b);
+    });
+  }
+  function setMode(m) {
+    st.mode = m;
+    $("osm-mode-yazi").className = m === "yazi" ? "on" : "";
+    $("osm-mode-ses").className = m === "ses" ? "on" : "";
+    $("osm-mic").classList.toggle("osm-hidden", m !== "ses");
+    $("osm-input").placeholder = m === "ses" ? "Duyulan metin burada görünür, düzeltebilirsiniz…" : (isPara() ? "Paragrafın okunuşunu Latin harfleriyle yazın…" : "Okunuşu Latin harfleriyle yazın…");
+  }
+  function fb(cls, html) { var f = $("osm-fb"); f.className = "osm-fb " + cls; f.innerHTML = html; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function updateMeta() {
+    $("osm-score").textContent = "Doğru: " + st.correct + " / " + st.asked;
+    $("osm-left").textContent = "Kalan: " + st.queue.length;
+  }
+
+  function startRound() {
+    stopMic();
+    st.queue = shuffle(DATA[st.level].items).slice(0, isPara() ? 5 : 15); st.asked = 0; st.correct = 0;
+    $("osm-play").classList.remove("osm-hidden");
+    next(true);
+  }
+  function next(first) {
+    stopMic();
+    if (!first && st.missed && st.cur && !st.cur.again) {
+      var c = {}; for (var k in st.cur) c[k] = st.cur[k]; c.again = true; st.queue.push(c);
+    }
+    if (!st.queue.length) return finish();
+    st.cur = st.queue.shift(); st.asked++; st.answered = false; st.missed = false;
+    var t = $("osm-text"); t.textContent = st.cur.o; t.className = "osm-text" + (isPara() ? " para" : "");
+    var inp = $("osm-input"); inp.value = ""; inp.rows = isPara() ? 4 : 1;
+    $("osm-fb").className = "osm-fb"; $("osm-listen").classList.add("osm-hidden");
+    setMode(st.mode); updateMeta();
+    if (st.mode === "yazi") { try { inp.focus({ preventScroll: true }); } catch (e) {} }
+  }
+  function finish() {
+    $("osm-text").className = "osm-text para"; $("osm-text").style.textAlign = "center";
+    $("osm-text").textContent = "Tur bitti! 🎉";
+    $("osm-play").classList.add("osm-hidden");
+    var card = $("osm-card"), old = $("osm-end"); if (old) old.remove();
+    var d = document.createElement("div"); d.id = "osm-end"; d.style.textAlign = "center";
+    d.innerHTML = "<p>" + st.asked + " sorudan <b>" + st.correct + "</b> tanesini doğru cevapladınız.</p>";
+    var b = document.createElement("button"); b.type = "button"; b.className = "on"; b.textContent = "Tekrar başla";
+    b.onclick = function () { d.remove(); $("osm-text").style.textAlign = ""; startRound(); };
+    d.appendChild(b); card.appendChild(d);
+    $("osm-score").textContent = "Doğru: " + st.correct + " / " + st.asked; $("osm-left").textContent = "";
+  }
+
+  function markCorrect() { if (!st.answered) { st.correct++; } st.answered = true; $("osm-listen").classList.remove("osm-hidden"); updateMeta(); }
+  function anlam() {
+    var c = st.cur, p = [];
+    if (c.a) p.push("Anlamı: " + esc(c.a));
+    if (c.t && c.t !== c.a) p.push("Bugünkü Türkçe: " + esc(c.t));
+    if (c.e) p.push("İngilizce: " + esc(c.e));
+    return p.length ? " <br><small>" + p.join("<br>") + "</small>" : "";
+  }
+
+  /* ========== KONTROL ========== */
+  function check(inputs) {
+    inputs = inputs.filter(function (x) { return x && x.trim(); });
+    if (!inputs.length) { fb("info", "Önce okunuşu yazın ya da sesle okuyun."); return; }
+    if (isPara()) return checkPara(inputs[0]);
+    var answers = [st.cur.l].concat(st.cur.v || []), best = 0;
+    inputs.forEach(function (inp) { answers.forEach(function (ans) { best = Math.max(best, ratio(key(inp), key(ans))); }); });
+    var heard = st.mode === "ses" ? "<br><small>Duyulan: “" + esc(inputs[0]) + "”</small>" : "";
+    if (best >= 0.85) { markCorrect(); fb("ok", "✅ Doğru! Okunuşu: <b>" + esc(st.cur.l) + "</b>" + anlam()); }
+    else if (best >= 0.6) { fb("near", "🟡 Çok yakın, bir daha deneyin." + heard); }
+    else { st.missed = true; fb("bad", "❌ Olmadı. Tekrar deneyin ya da cevabı görün." + heard); }
+  }
+  function checkPara(text) {
+    var toks = st.cur.l.split(/\s+/), exp = toks.map(function (t) { return key(t); });
+    var usr = words(text), n = exp.length, m = usr.length, i, j;
+    function eq(a, b) { return a && b && ratio(a, b) >= 0.75; }
+    // Kelime düzeyinde en uzun ortak dizi (eksik/fazla kelimelere dayanıklı)
+    var L = []; for (i = 0; i <= n; i++) { L[i] = []; for (j = 0; j <= m; j++) L[i][j] = 0; }
+    for (i = n - 1; i >= 0; i--) for (j = m - 1; j >= 0; j--)
+      L[i][j] = eq(exp[i], usr[j]) ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    var ok = []; i = 0; j = 0;
+    while (i < n && j < m) {
+      if (eq(exp[i], usr[j])) { ok[i] = true; i++; j++; }
+      else if (L[i + 1][j] >= L[i][j + 1]) i++; else j++;
+    }
+    var hit = ok.filter(Boolean).length, pct = Math.round(hit / n * 100);
+    var html = toks.map(function (t, k) { return '<span class="' + (ok[k] ? "w-ok" : "w-miss") + '">' + esc(t) + "</span>"; }).join(" ");
+    if (pct >= 85) { markCorrect(); fb("ok", "✅ %" + pct + " doğru!<br>" + html + anlam()); }
+    else { if (pct < 60) st.missed = true; fb(pct >= 60 ? "near" : "bad", "%" + pct + " doğru. Altı çizili kelimeleri tekrar deneyin:<br>" + html); }
+  }
+  function reveal() {
+    st.missed = true; st.answered = true;
+    fb("info", "Doğru okunuş: <b>" + esc(st.cur.l) + "</b>" + anlam());
+    $("osm-listen").classList.remove("osm-hidden");
+  }
+
+  /* ========== SES ========== */
+  function speak(t) {
+    if (!("speechSynthesis" in window)) { fb("info", "Bu tarayıcı sesli okumayı desteklemiyor."); return; }
+    speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(t.replace(/-/g, " ")); u.lang = "tr-TR"; u.rate = 0.85;
+    var v = speechSynthesis.getVoices().filter(function (x) { return /^tr/i.test(x.lang); })[0]; if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  }
+  function micBtn() {
+    var b = $("osm-mic"); b.classList.toggle("rec", listening);
+    b.textContent = listening ? (isPara() ? "⏹ Bitirdim" : "● Dinliyorum…") : "🎤 Okumaya başla";
+  }
+  function stopMic() { if (rec && listening) { try { rec.onend = null; rec.abort(); } catch (e) {} } listening = false; micBtn(); }
+  function startMic() {
+    if (!SR) return;
+    if (listening) { rec.stop(); return; }
+    var para = isPara(), finalText = ""; lastAlts = [];
+    rec = new SR(); rec.lang = "tr-TR"; rec.interimResults = para; rec.continuous = para; rec.maxAlternatives = para ? 1 : 5;
+    rec.onresult = function (e) {
+      var interim = "";
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        var r = e.results[i];
+        if (r.isFinal) { finalText += r[0].transcript + " "; if (!para) for (var k = 0; k < r.length; k++) lastAlts.push(r[k].transcript); }
+        else interim += r[0].transcript;
+      }
+      $("osm-input").value = (finalText + interim).trim();
+    };
+    rec.onerror = function (e) {
+      var msg = { "not-allowed": "Mikrofon izni verilmedi. Adres çubuğundaki kilit simgesinden izin verebilirsiniz.",
+                  "no-speech": "Ses algılanmadı, tekrar deneyin.", "network": "Ses tanıma için internet bağlantısı gerekiyor." }[e.error];
+      fb("info", msg || "Ses tanımada bir sorun oldu (" + e.error + ").");
+    };
+    rec.onend = function () {
+      listening = false; micBtn();
+      var v = $("osm-input").value;
+      if (!para && lastAlts.length) check(lastAlts); else if (v.trim()) check([v]);
+    };
+    try { rec.start(); listening = true; micBtn(); fb("info", para ? "Paragrafı okuyun, bitince ⏹ düğmesine basın." : "Kelimeyi okuyun…"); }
+    catch (e) { fb("info", "Mikrofon başlatılamadı."); }
+  }
+
+  /* ========== OLAYLAR ========== */
+  $("osm-check").onclick = function () { check([$("osm-input").value]); };
+  $("osm-input").onkeydown = function (e) { if (e.key === "Enter" && !isPara()) { e.preventDefault(); check([this.value]); } };
+  $("osm-reveal").onclick = reveal;
+  $("osm-next").onclick = function () { next(false); };
+  $("osm-listen").onclick = function () { speak(st.cur.l); };
+  $("osm-mic").onclick = startMic;
+  $("osm-mode-yazi").onclick = function () { stopMic(); setMode("yazi"); };
+  $("osm-mode-ses").onclick = function () { setMode("ses"); };
+  if (!SR) {
+    $("osm-mode-ses").disabled = true;
+    $("osm-mode-ses").title = "Bu tarayıcı sesli kontrolü desteklemiyor";
+    $("osm-note").textContent = "Bu tarayıcı sesli kontrolü desteklemiyor; yazarak devam edebilirsiniz. (Sesli mod için Android veya bilgisayarda Chrome önerilir.)";
+  }
+  if ("speechSynthesis" in window) speechSynthesis.getVoices();
+
+  function veriYukle() {
+    if (!window.fetch || !window.Promise) return Promise.resolve(false);
+    var bitti = false;
+    var zaman = new Promise(function (ok) { setTimeout(function () { ok(null); }, 7000); });
+    var istek = Promise.all(VERI_DOSYALARI.map(function (d) {
+      return fetch(VERI_ADRESI + d).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+    })).catch(function () { return null; });
+    return Promise.race([istek, zaman]).then(function (liste) {
+      if (bitti || !liste) return false;
+      bitti = true;
+      var gecerli = liste.every(function (lv) {
+        return lv && lv.items && lv.items.length && lv.items.every(function (x) { return x && x.o && x.l; });
+      });
+      if (!gecerli) return false;
+      DATA = liste;
+      return true;
+    });
+  }
+
+  buildLevels(); setMode("yazi");
+  $("osm-text").textContent = "…"; $("osm-score").textContent = "Kelimeler yükleniyor…";
+  veriYukle().then(function (cevrimici) {
+    var toplam = 0; DATA.forEach(function (lv) { if (!lv.para) toplam += lv.items.length; });
+    $("osm-src").innerHTML = cevrimici
+      ? toplam + " kelime · Kaynak: grubun listesi ve <a href=\"https://en.wiktionary.org/wiki/Category:Ottoman_Turkish_lemmas\" target=\"_blank\" rel=\"noopener\">Vikisözlük</a> (CC BY-SA 4.0)"
+      : toplam + " kelime (çevrimdışı liste)";
+    buildLevels(); startRound();
+  });
+})();
+</script>
+<!-- ===== Osmanlıca Okuma Alıştırması — son ===== -->
